@@ -73,7 +73,7 @@ class HBNBCommand(cmd.Cmd):
                 pline = pline[2].strip()  # pline is now str
                 if pline:
                     # check for *args or **kwargs
-                    if pline[0] is '{' and pline[-1] is'}'\
+                    if pline[0] is '{' and pline[-1] is '}'\
                             and type(eval(pline)) is dict:
                         _args = pline
                     else:
@@ -113,18 +113,47 @@ class HBNBCommand(cmd.Cmd):
         """ Overrides the emptyline method of CMD """
         pass
 
-    def do_create(self, args):
+    def do_create(self, arg):
         """ Create an object of any class"""
+        args = arg.split()
         if not args:
             print("** class name missing **")
             return
-        elif args not in HBNBCommand.classes:
+
+        class_name = args[0]
+        if class_name not in HBNBCommand.classes:
             print("** class doesn't exist **")
             return
-        new_instance = HBNBCommand.classes[args]()
-        storage.save()
+
+        new_instance = HBNBCommand.classes[class_name]()
+
+        for param in args[1:]:
+            key_value = param.split("=")
+            if len(key_value) != 2:
+                continue
+            k, v = key_value
+            v = self.parse_value(v)
+            if v is not None:
+                setattr(new_instance, k, v)
+
+        new_instance.save()
         print(new_instance.id)
-        storage.save()
+
+    def parse_value(self, v):
+        """parse the value according to it's type"""
+        if v.startswith('"') and v.endswith('"'):
+            v = v[1:-1].replace('\\"', '"').replace('_', ' ')
+            return v
+        elif '.' in v:
+            try:
+                return float(v)
+            except ValueError:
+                return None
+        else:
+            try:
+                return int(v)
+            except ValueError:
+                return None
 
     def help_create(self):
         """ Help information for the create method """
@@ -187,7 +216,7 @@ class HBNBCommand(cmd.Cmd):
         key = c_name + "." + c_id
 
         try:
-            del(storage.all()[key])
+            del (storage.all()[key])
             storage.save()
         except KeyError:
             print("** no instance found **")
@@ -213,7 +242,7 @@ class HBNBCommand(cmd.Cmd):
             for k, v in storage._FileStorage__objects.items():
                 print_list.append(str(v))
 
-        print(print_list)
+        print("[{}]".format(", ".join(print_list)))
 
     def help_all(self):
         """ Help information for the all command """
@@ -319,6 +348,7 @@ class HBNBCommand(cmd.Cmd):
         """ Help information for the update class """
         print("Updates an object with new information")
         print("Usage: update <className> <id> <attName> <attVal>\n")
+
 
 if __name__ == "__main__":
     HBNBCommand().cmdloop()
